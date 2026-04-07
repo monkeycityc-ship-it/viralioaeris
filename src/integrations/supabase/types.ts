@@ -14,16 +14,190 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      favorites: {
+        Row: {
+          created_at: string
+          generation_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          generation_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          generation_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorites_generation_id_fkey"
+            columns: ["generation_id"]
+            isOneToOne: false
+            referencedRelation: "generations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      generations: {
+        Row: {
+          created_at: string
+          credits_used: number
+          id: string
+          metadata: Json | null
+          prompt: string
+          result_text: string | null
+          result_url: string | null
+          status: Database["public"]["Enums"]["generation_status"]
+          thumbnail_url: string | null
+          type: Database["public"]["Enums"]["generation_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          credits_used?: number
+          id?: string
+          metadata?: Json | null
+          prompt: string
+          result_text?: string | null
+          result_url?: string | null
+          status?: Database["public"]["Enums"]["generation_status"]
+          thumbnail_url?: string | null
+          type: Database["public"]["Enums"]["generation_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          credits_used?: number
+          id?: string
+          metadata?: Json | null
+          prompt?: string
+          result_text?: string | null
+          result_url?: string | null
+          status?: Database["public"]["Enums"]["generation_status"]
+          thumbnail_url?: string | null
+          type?: Database["public"]["Enums"]["generation_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          credits: number
+          display_name: string | null
+          email: string | null
+          id: string
+          is_banned: boolean
+          plan: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+          voice_characters_remaining: number
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          credits?: number
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          is_banned?: boolean
+          plan?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+          voice_characters_remaining?: number
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          credits?: number
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          is_banned?: boolean
+          plan?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+          voice_characters_remaining?: number
+        }
+        Relationships: []
+      }
+      reference_images: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_url: string
+          id: string
+          purpose: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_url: string
+          id?: string
+          purpose?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          purpose?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
+      generation_status: "pending" | "processing" | "done" | "failed"
+      generation_type: "text" | "image" | "video"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +324,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+      generation_status: ["pending", "processing", "done", "failed"],
+      generation_type: ["text", "image", "video"],
+    },
   },
 } as const
