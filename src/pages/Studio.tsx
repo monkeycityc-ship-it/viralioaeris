@@ -204,7 +204,7 @@ export default function Studio() {
     }
   };
 
-  const addToFavorites = async (genId?: string) => {
+  const addToFavorites = async () => {
     if (!user) return;
     // get latest generation
     const { data } = await supabase.from("generations").select("id").eq("user_id", user.id).order("created_at", { ascending: false }).limit(1).single();
