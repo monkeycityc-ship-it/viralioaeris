@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Zap, LayoutDashboard, PenTool, Image, Film, Clock, Star,
-  Settings, Shield, LogOut, CreditCard, ChevronLeft, Menu, X, Mic
+  Settings, Shield, LogOut, CreditCard, ChevronLeft, Menu, X, Mic, Scissors
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -14,6 +14,7 @@ const navItems = [
   { path: "/studio/image", label: "Image AI", icon: Image },
   { path: "/studio/video", label: "Video AI", icon: Film },
   { path: "/voice-studio", label: "Voice AI", icon: Mic },
+  { path: "/caption-eraser", label: "Caption Eraser", icon: Scissors },
   { path: "/history", label: "Istoric", icon: Clock },
   { path: "/favorites", label: "Favorite", icon: Star },
 ];
