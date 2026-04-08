@@ -197,7 +197,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "moderator" | "user"
       generation_status: "pending" | "processing" | "done" | "failed"
-      generation_type: "text" | "image" | "video"
+      generation_type: "text" | "image" | "video" | "audio"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -327,7 +327,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "moderator", "user"],
       generation_status: ["pending", "processing", "done", "failed"],
-      generation_type: ["text", "image", "video"],
+      generation_type: ["text", "image", "video", "audio"],
     },
   },
 } as const
