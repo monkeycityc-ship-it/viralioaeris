@@ -2,20 +2,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Trash2, Copy, Download, Star, Search, Filter, PenTool, Image, Film } from "lucide-react";
+import { Trash2, Copy, Download, Star, Search, PenTool, Image, Film, Mic, CheckSquare, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import BatchDownloadButton from "@/components/BatchDownloadButton";
 
-type FilterType = "all" | "text" | "image" | "video";
+type FilterType = "all" | "text" | "image" | "video" | "audio";
 
 export default function History() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterType>("all");
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const { data: generations, isLoading } = useQuery({
     queryKey: ["generations", user?.id, filter, search],
@@ -45,18 +48,37 @@ export default function History() {
     toast.success("Adăugat la favorite!");
   };
 
-  const typeIcons: Record<string, typeof PenTool> = { text: PenTool, image: Image, video: Film };
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]);
+  };
+
+  const selectAllDownloadable = () => {
+    const downloadable = generations?.filter((g) => g.result_url).map((g) => g.id) ?? [];
+    setSelectedIds(downloadable);
+  };
+
+  const typeIcons: Record<string, typeof PenTool> = { text: PenTool, image: Image, video: Film, audio: Mic };
   const filters: { value: FilterType; label: string }[] = [
     { value: "all", label: "Toate" },
     { value: "text", label: "Text" },
     { value: "image", label: "Imagini" },
     { value: "video", label: "Video" },
+    { value: "audio", label: "Audio" },
   ];
 
   return (
     <DashboardLayout>
       <div className="max-w-5xl mx-auto space-y-6">
-        <h1 className="text-2xl font-black">Istoric Generări</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-black">Istoric Generări</h1>
+          {generations && generations.filter((g) => g.result_url).length > 0 && (
+            <Button variant="outline" size="sm" onClick={selectAllDownloadable}>
+              <CheckSquare className="w-3.5 h-3.5 mr-1" /> Selectează tot
+            </Button>
+          )}
+        </div>
+
+        <BatchDownloadButton selectedIds={selectedIds} onClear={() => setSelectedIds([])} />
 
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -86,8 +108,14 @@ export default function History() {
           <div className="space-y-3">
             {generations.map((gen) => {
               const Icon = typeIcons[gen.type] ?? PenTool;
+              const isSelected = selectedIds.includes(gen.id);
               return (
-                <div key={gen.id} className="bg-card rounded-xl border border-border p-4 flex gap-4 items-start hover:border-primary/20 transition-colors">
+                <div key={gen.id} className={`bg-card rounded-xl border p-4 flex gap-4 items-start transition-colors ${isSelected ? "border-primary/40 bg-primary/5" : "border-border hover:border-primary/20"}`}>
+                  {gen.result_url && (
+                    <div className="flex items-center pt-1">
+                      <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(gen.id)} />
+                    </div>
+                  )}
                   <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
                     <Icon className="w-5 h-5 text-muted-foreground" />
                   </div>
@@ -96,6 +124,9 @@ export default function History() {
                     {gen.result_text && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{gen.result_text}</p>}
                     {gen.result_url && gen.type === "image" && (
                       <img src={gen.result_url} alt="" className="mt-2 rounded-lg max-h-32 object-cover" />
+                    )}
+                    {gen.result_url && gen.type === "audio" && (
+                      <audio src={gen.result_url} controls className="mt-2 w-full max-w-md" />
                     )}
                     <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                       <span>{format(new Date(gen.created_at), "dd.MM.yyyy HH:mm")}</span>

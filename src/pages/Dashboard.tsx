@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { CreditCard, PenTool, Image, Film, Zap, TrendingUp } from "lucide-react";
+import { CreditCard, PenTool, Image, Film, Zap, TrendingUp, Mic } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,7 @@ export default function Dashboard() {
     { path: "/studio/text", label: "Text AI", desc: "Generează scripturi și texte virale", icon: PenTool, credits: "1 Credit" },
     { path: "/studio/image", label: "Image AI", desc: "Imagini ultra-realiste cu AI", icon: Image, credits: "2 Credite" },
     { path: "/studio/video", label: "Video AI", desc: "Clipuri cinematice generate", icon: Film, credits: "5 Credite" },
+    { path: "/voice-studio", label: "Voice AI", desc: "Transformă text în audio cu voci AI", icon: Mic, credits: "2 Credite" },
   ];
 
   return (
