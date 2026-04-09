@@ -298,7 +298,7 @@ export default function Studio() {
               Rezoluție: {ASPECT_DIMENSIONS[aspectRatio]?.width} × {ASPECT_DIMENSIONS[aspectRatio]?.height}px
             </p>
           </div>
-        )
+        )}
 
         {/* Prompt */}
         <div className="space-y-2">
