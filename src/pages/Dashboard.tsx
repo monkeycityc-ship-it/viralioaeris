@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { CreditCard, PenTool, Image, Film, Zap, TrendingUp, Mic, Scissors } from "lucide-react";
+import { CreditCard, PenTool, Image, Film, Zap, TrendingUp, Mic, Scissors, Languages } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +25,7 @@ export default function Dashboard() {
     { path: "/studio/video", label: "Video AI", desc: "Clipuri cinematice generate", icon: Film, credits: "5 Credite" },
     { path: "/voice-studio", label: "Voice AI", desc: "Transformă text în audio cu voci AI", icon: Mic, credits: "2 Credite" },
     { path: "/caption-eraser", label: "Caption Eraser", desc: "Elimină subtitrările din videouri", icon: Scissors, credits: "5 Credite" },
+    { path: "/video-translator", label: "Video Translator", desc: "Traduce audio din video în orice limbă", icon: Languages, credits: "3 Credite" },
   ];
 
   return (
