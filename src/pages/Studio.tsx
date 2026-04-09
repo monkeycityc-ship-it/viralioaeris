@@ -274,6 +274,32 @@ export default function Studio() {
           </div>
         )}
 
+        {/* Aspect Ratio Selector */}
+        {(type === "image" || type === "video") && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Dimensiune / Aspect Ratio</label>
+            <div className="flex gap-2">
+              {ASPECT_RATIOS.map((r) => (
+                <button
+                  key={r.value}
+                  onClick={() => setAspectRatio(r.value)}
+                  className={`px-4 py-2 text-sm font-medium rounded-xl border transition-colors ${
+                    aspectRatio === r.value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/30"
+                  }`}
+                >
+                  <span className="font-bold">{r.label}</span>
+                  <span className="text-xs block opacity-70">{r.desc}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Rezoluție: {ASPECT_DIMENSIONS[aspectRatio]?.width} × {ASPECT_DIMENSIONS[aspectRatio]?.height}px
+            </p>
+          </div>
+        )
+
         {/* Prompt */}
         <div className="space-y-2">
           <Textarea
