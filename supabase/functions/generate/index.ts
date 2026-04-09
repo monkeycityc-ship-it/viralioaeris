@@ -222,20 +222,24 @@ serve(async (req) => {
           prompt,
           status: "processing",
           credits_used: 5,
+          metadata: { aspectRatio: aspectRatio ?? "16:9", width: width ?? 1344, height: height ?? 768 },
         }).select("id").single();
         generationId = gen?.id ?? null;
       }
 
       // Use image generation as frames, then describe the video concept
+      const vidWidth = width ?? 1344;
+      const vidHeight = height ?? 768;
+      const sizeInstruction = `Generate the image at ${vidWidth}x${vidHeight} pixels (aspect ratio: ${aspectRatio ?? "16:9"}).`;
       const videoMessages: any[] = [
         {
           role: "user",
           content: referenceImage
             ? [
-                { type: "text", text: `Create a key frame image for this video concept: ${prompt}` },
+                { type: "text", text: `${sizeInstruction} Create a key frame image for this video concept: ${prompt}` },
                 { type: "image_url", image_url: { url: referenceImage } },
               ]
-            : `Create a key frame image for this video concept: ${prompt}`,
+            : `${sizeInstruction} Create a key frame image for this video concept: ${prompt}`,
         },
       ];
 
