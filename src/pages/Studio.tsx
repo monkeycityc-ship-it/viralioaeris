@@ -29,6 +29,18 @@ const TEMPLATES: Record<string, { label: string; prompt: string }[]> = {
 
 const CREDITS_COST: Record<string, number> = { text: 1, image: 2, video: 5 };
 
+const ASPECT_RATIOS = [
+  { label: "1:1", value: "1:1", desc: "Instagram" },
+  { label: "9:16", value: "9:16", desc: "TikTok / Reels" },
+  { label: "16:9", value: "16:9", desc: "YouTube" },
+];
+
+const ASPECT_DIMENSIONS: Record<string, { width: number; height: number }> = {
+  "1:1": { width: 1024, height: 1024 },
+  "9:16": { width: 768, height: 1344 },
+  "16:9": { width: 1344, height: 768 },
+};
+
 export default function Studio() {
   const { type = "text" } = useParams<{ type: string }>();
   const { user, profile, refreshProfile } = useAuth();
@@ -37,6 +49,7 @@ export default function Studio() {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const [aspectRatio, setAspectRatio] = useState("1:1");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const creditCost = CREDITS_COST[type] ?? 1;
@@ -69,7 +82,8 @@ export default function Studio() {
     setResultUrl(null);
 
     try {
-      const body: any = { prompt, type, referenceImage };
+      const dims = ASPECT_DIMENSIONS[aspectRatio] ?? ASPECT_DIMENSIONS["1:1"];
+      const body: any = { prompt, type, referenceImage, aspectRatio, width: dims.width, height: dims.height };
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate`,
         {
@@ -257,6 +271,32 @@ export default function Studio() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Aspect Ratio Selector */}
+        {(type === "image" || type === "video") && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">Dimensiune / Aspect Ratio</label>
+            <div className="flex gap-2">
+              {ASPECT_RATIOS.map((r) => (
+                <button
+                  key={r.value}
+                  onClick={() => setAspectRatio(r.value)}
+                  className={`px-4 py-2 text-sm font-medium rounded-xl border transition-colors ${
+                    aspectRatio === r.value
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border bg-card text-muted-foreground hover:border-primary/30"
+                  }`}
+                >
+                  <span className="font-bold">{r.label}</span>
+                  <span className="text-xs block opacity-70">{r.desc}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Rezoluție: {ASPECT_DIMENSIONS[aspectRatio]?.width} × {ASPECT_DIMENSIONS[aspectRatio]?.height}px
+            </p>
           </div>
         )}
 

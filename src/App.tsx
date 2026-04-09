@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Studio from "./pages/Studio";
 import VoiceStudio from "./pages/VoiceStudio";
 import CaptionEraser from "./pages/CaptionEraser";
+import VideoTranslator from "./pages/VideoTranslator";
 import History from "./pages/History";
 import Favorites from "./pages/Favorites";
 import Admin from "./pages/Admin";
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/studio/:type" element={<ProtectedRoute><Studio /></ProtectedRoute>} />
             <Route path="/voice-studio" element={<ProtectedRoute><VoiceStudio /></ProtectedRoute>} />
             <Route path="/caption-eraser" element={<ProtectedRoute><CaptionEraser /></ProtectedRoute>} />
+            <Route path="/video-translator" element={<ProtectedRoute><VideoTranslator /></ProtectedRoute>} />
             <Route path="/history" element={<ProtectedRoute><History /></ProtectedRoute>} />
             <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />

@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, type, referenceImage } = await req.json();
+    const { prompt, type, referenceImage, aspectRatio, width, height } = await req.json();
 
     if (!prompt || typeof prompt !== "string" || prompt.trim().length === 0) {
       return new Response(JSON.stringify({ error: "Prompt is required" }), {
@@ -122,15 +122,19 @@ serve(async (req) => {
 
     // IMAGE GENERATION
     if (type === "image") {
+      const imgWidth = width ?? 1024;
+      const imgHeight = height ?? 1024;
+      const sizeInstruction = `Generate the image at ${imgWidth}x${imgHeight} pixels (aspect ratio: ${aspectRatio ?? "1:1"}).`;
+
       const imageMessages: any[] = [
         {
           role: "user",
           content: referenceImage
             ? [
-                { type: "text", text: prompt },
+                { type: "text", text: `${sizeInstruction} ${prompt}` },
                 { type: "image_url", image_url: { url: referenceImage } },
               ]
-            : prompt,
+            : `${sizeInstruction} ${prompt}`,
         },
       ];
 
@@ -193,10 +197,9 @@ serve(async (req) => {
           result_text: resultText,
           status: "done",
           credits_used: 2,
+          metadata: { aspectRatio: aspectRatio ?? "1:1", width: width ?? 1024, height: height ?? 1024 },
         });
 
-        // Deduct credits
-        await supabase.rpc("", {}).catch(() => {});
         const { data: profile } = await supabase.from("profiles").select("credits").eq("user_id", userId).single();
         if (profile) {
           await supabase.from("profiles").update({ credits: profile.credits - 2 }).eq("user_id", userId);
@@ -219,20 +222,24 @@ serve(async (req) => {
           prompt,
           status: "processing",
           credits_used: 5,
+          metadata: { aspectRatio: aspectRatio ?? "16:9", width: width ?? 1344, height: height ?? 768 },
         }).select("id").single();
         generationId = gen?.id ?? null;
       }
 
       // Use image generation as frames, then describe the video concept
+      const vidWidth = width ?? 1344;
+      const vidHeight = height ?? 768;
+      const sizeInstruction = `Generate the image at ${vidWidth}x${vidHeight} pixels (aspect ratio: ${aspectRatio ?? "16:9"}).`;
       const videoMessages: any[] = [
         {
           role: "user",
           content: referenceImage
             ? [
-                { type: "text", text: `Create a key frame image for this video concept: ${prompt}` },
+                { type: "text", text: `${sizeInstruction} Create a key frame image for this video concept: ${prompt}` },
                 { type: "image_url", image_url: { url: referenceImage } },
               ]
-            : `Create a key frame image for this video concept: ${prompt}`,
+            : `${sizeInstruction} Create a key frame image for this video concept: ${prompt}`,
         },
       ];
 
