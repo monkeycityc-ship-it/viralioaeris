@@ -1,6 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { CreditCard, PenTool, Image, Film, Zap, TrendingUp, Mic, Scissors, Languages } from "lucide-react";
+import { CreditCard, PenTool, Image, Film, Zap, TrendingUp, Mic, Scissors, Languages, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,12 +26,12 @@ export default function Dashboard() {
     { path: "/voice-studio", label: "Voice AI", desc: "Transformă text în audio cu voci AI", icon: Mic, credits: "2 Credite" },
     { path: "/caption-eraser", label: "Caption Eraser", desc: "Elimină subtitrările din videouri", icon: Scissors, credits: "5 Credite" },
     { path: "/video-translator", label: "Video Translator", desc: "Traduce audio din video în orice limbă", icon: Languages, credits: "3 Credite" },
+    { path: "/video-downloader", label: "Video Downloader", desc: "Descarcă și traduce videouri de pe YouTube", icon: Download, credits: "3 Credite" },
   ];
 
   return (
     <DashboardLayout>
       <div className="max-w-6xl mx-auto space-y-8">
-        {/* Welcome */}
         <div>
           <h1 className="text-3xl font-black">
             Bine ai venit, <span className="gradient-text">{profile?.display_name ?? "Creator"}</span>!
@@ -39,7 +39,6 @@ export default function Dashboard() {
           <p className="text-muted-foreground mt-1">Alege un instrument și începe să creezi.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-card rounded-2xl border border-border p-5">
             <div className="flex items-center gap-3 mb-2">
@@ -52,8 +51,8 @@ export default function Dashboard() {
           </div>
           <div className="bg-card rounded-2xl border border-border p-5">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-info/10 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-info" />
+              <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-primary" />
               </div>
             </div>
             <p className="text-2xl font-black">{(stats?.text ?? 0) + (stats?.image ?? 0) + (stats?.video ?? 0)}</p>
@@ -61,8 +60,8 @@ export default function Dashboard() {
           </div>
           <div className="bg-card rounded-2xl border border-border p-5">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-success" />
+              <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                <Zap className="w-5 h-5 text-primary" />
               </div>
             </div>
             <p className="text-2xl font-black capitalize">{profile?.plan ?? "free"}</p>
@@ -70,8 +69,8 @@ export default function Dashboard() {
           </div>
           <div className="bg-card rounded-2xl border border-border p-5">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center">
-                <Image className="w-5 h-5 text-warning" />
+              <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
+                <Image className="w-5 h-5 text-primary" />
               </div>
             </div>
             <p className="text-2xl font-black">{stats?.image ?? 0}</p>
@@ -79,7 +78,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Tools */}
         <div>
           <h2 className="text-xl font-bold mb-4">Instrumente AI</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

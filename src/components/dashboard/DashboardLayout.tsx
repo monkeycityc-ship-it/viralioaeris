@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Zap, LayoutDashboard, PenTool, Image, Film, Clock, Star,
-  Settings, Shield, LogOut, CreditCard, ChevronLeft, Menu, X, Mic, Scissors, Languages
+  Settings, Shield, LogOut, CreditCard, Menu, X, Mic, Scissors, Languages, Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -16,8 +16,10 @@ const navItems = [
   { path: "/voice-studio", label: "Voice AI", icon: Mic },
   { path: "/caption-eraser", label: "Caption Eraser", icon: Scissors },
   { path: "/video-translator", label: "Video Translator", icon: Languages },
+  { path: "/video-downloader", label: "Video Downloader", icon: Download },
   { path: "/history", label: "Istoric", icon: Clock },
   { path: "/favorites", label: "Favorite", icon: Star },
+  { path: "/pricing", label: "Planuri & Prețuri", icon: CreditCard },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -33,12 +35,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-muted/30 flex">
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-foreground/20 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Sidebar */}
       <aside className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-card border-r border-border flex flex-col transition-transform lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="p-4 flex items-center justify-between border-b border-border">
           <Link to="/dashboard" className="flex items-center gap-2">
@@ -52,7 +52,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        {/* Credits */}
         <div className="p-4 border-b border-border">
           <div className="bg-muted rounded-xl p-3">
             <div className="flex items-center justify-between mb-1">
@@ -69,7 +68,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
 
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => (
             <Link
               key={item.path}
@@ -120,7 +119,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      {/* Main */}
       <div className="flex-1 flex flex-col min-h-screen">
         <header className="h-14 border-b border-border bg-card flex items-center px-4 gap-4">
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden">
