@@ -90,7 +90,7 @@ export default function Pricing() {
                 ))}
               </ul>
 
-              <Link to="/auth">
+              <Link to="/auth?redirect=/pricing">
                 <Button
                   className={`w-full font-semibold ${
                     plan.recommended

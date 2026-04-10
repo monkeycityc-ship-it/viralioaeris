@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Upload, Play, Download, RotateCcw, Loader2, Scissors } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Upload, Download, RotateCcw, Loader2, Scissors, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -24,9 +25,11 @@ export default function CaptionEraser() {
   const [processedUrl, setProcessedUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [step, setStep] = useState<"upload" | "select" | "preview">("upload");
+  const [intensity, setIntensity] = useState(50); // 0-100
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -80,6 +83,87 @@ export default function CaptionEraser() {
     setDrawStart(null);
   };
 
+  // Get blur settings based on intensity
+  const getBlurSettings = (intensityValue: number) => {
+    if (intensityValue <= 33) {
+      // Low: gentle gaussian blur + color match overlay
+      return { blurPx: 8, overlayAlpha: 0.3, method: "soft" as const };
+    } else if (intensityValue <= 66) {
+      // Medium: moderate blur + semi-transparent fill
+      return { blurPx: 15, overlayAlpha: 0.2, method: "medium" as const };
+    } else {
+      // High: strong blur
+      return { blurPx: 25, overlayAlpha: 0.1, method: "strong" as const };
+    }
+  };
+
+  const handlePreview = () => {
+    if (!videoRef.current || !previewCanvasRef.current || !selection) return;
+    const video = videoRef.current;
+    const canvas = previewCanvasRef.current;
+    const ctx = canvas.getContext("2d")!;
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const blurX = Math.round(selection.x * video.videoWidth);
+    const blurY = Math.round(selection.y * video.videoHeight);
+    const blurW = Math.round(selection.width * video.videoWidth);
+    const blurH = Math.round(selection.height * video.videoHeight);
+
+    const settings = getBlurSettings(intensity);
+
+    // Draw full frame
+    ctx.drawImage(video, 0, 0);
+
+    // Sample surrounding colors for natural fill
+    const surroundingData = ctx.getImageData(
+      Math.max(0, blurX - 5),
+      Math.max(0, blurY - 5),
+      Math.min(blurW + 10, canvas.width - blurX + 5),
+      Math.min(blurH + 10, canvas.height - blurY + 5)
+    );
+
+    // Calculate average color from edges
+    let r = 0, g = 0, b = 0, count = 0;
+    const d = surroundingData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      r += d[i]; g += d[i + 1]; b += d[i + 2]; count++;
+    }
+    if (count > 0) { r = Math.round(r / count); g = Math.round(g / count); b = Math.round(b / count); }
+
+    // Apply blur to selected region
+    ctx.save();
+    ctx.filter = `blur(${settings.blurPx}px)`;
+    ctx.beginPath();
+    ctx.rect(blurX, blurY, blurW, blurH);
+    ctx.clip();
+    ctx.drawImage(video, 0, 0);
+    ctx.restore();
+
+    // Apply color-matching overlay for natural look
+    ctx.save();
+    ctx.globalAlpha = settings.overlayAlpha;
+    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+    ctx.fillRect(blurX, blurY, blurW, blurH);
+    ctx.restore();
+
+    // Feather edges with gradient for softer transition
+    const featherSize = Math.min(blurW, blurH) * 0.15;
+    // Top edge
+    const topGrad = ctx.createLinearGradient(blurX, blurY, blurX, blurY + featherSize);
+    topGrad.addColorStop(0, `rgba(${r},${g},${b},0.3)`);
+    topGrad.addColorStop(1, "transparent");
+    ctx.fillStyle = topGrad;
+    ctx.fillRect(blurX, blurY, blurW, featherSize);
+    // Bottom edge
+    const botGrad = ctx.createLinearGradient(blurX, blurY + blurH, blurX, blurY + blurH - featherSize);
+    botGrad.addColorStop(0, `rgba(${r},${g},${b},0.3)`);
+    botGrad.addColorStop(1, "transparent");
+    ctx.fillStyle = botGrad;
+    ctx.fillRect(blurX, blurY + blurH - featherSize, blurW, featherSize);
+  };
+
   const processVideo = useCallback(async () => {
     if (!videoFile || !selection || !videoRef.current || !canvasRef.current || !user) return;
 
@@ -96,7 +180,6 @@ export default function CaptionEraser() {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d")!;
 
-      // Set canvas to video dimensions
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
 
@@ -105,7 +188,8 @@ export default function CaptionEraser() {
       const blurW = Math.round(selection.width * video.videoWidth);
       const blurH = Math.round(selection.height * video.videoHeight);
 
-      // Use MediaRecorder to capture canvas as video
+      const settings = getBlurSettings(intensity);
+
       const stream = canvas.captureStream(30);
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: "video/webm;codecs=vp9",
@@ -118,45 +202,52 @@ export default function CaptionEraser() {
       };
 
       const recordingDone = new Promise<Blob>((resolve) => {
-        mediaRecorder.onstop = () => {
-          resolve(new Blob(chunks, { type: "video/webm" }));
-        };
+        mediaRecorder.onstop = () => resolve(new Blob(chunks, { type: "video/webm" }));
       });
 
-      // Play video and render frames with blur applied
       video.currentTime = 0;
-      await new Promise<void>((r) => {
-        video.onseeked = () => r();
-        video.currentTime = 0;
-      });
+      await new Promise<void>((r) => { video.onseeked = () => r(); video.currentTime = 0; });
 
       mediaRecorder.start();
       video.muted = true;
       await video.play();
 
       const duration = video.duration;
-      const renderFrame = () => {
-        if (video.paused || video.ended) {
-          mediaRecorder.stop();
-          return;
-        }
+      let avgR = 128, avgG = 128, avgB = 128;
 
-        // Draw full frame
+      const renderFrame = () => {
+        if (video.paused || video.ended) { mediaRecorder.stop(); return; }
+
         ctx.drawImage(video, 0, 0);
 
-        // Apply blur to selected region
+        // Sample surrounding colors every few frames for natural fill
+        try {
+          const sampleData = ctx.getImageData(
+            Math.max(0, blurX - 2), Math.max(0, blurY - 2),
+            Math.min(blurW + 4, canvas.width - blurX + 2),
+            Math.min(blurH + 4, canvas.height - blurY + 2)
+          );
+          const d = sampleData.data;
+          let sr = 0, sg = 0, sb = 0, sc = 0;
+          for (let i = 0; i < d.length; i += 16) {
+            sr += d[i]; sg += d[i + 1]; sb += d[i + 2]; sc++;
+          }
+          if (sc > 0) { avgR = Math.round(sr / sc); avgG = Math.round(sg / sc); avgB = Math.round(sb / sc); }
+        } catch {}
+
+        // Apply blur
         ctx.save();
-        ctx.filter = "blur(20px)";
+        ctx.filter = `blur(${settings.blurPx}px)`;
         ctx.beginPath();
         ctx.rect(blurX, blurY, blurW, blurH);
         ctx.clip();
         ctx.drawImage(video, 0, 0);
         ctx.restore();
 
-        // Draw a subtle overlay on blurred area for extra coverage
+        // Color-matching overlay
         ctx.save();
-        ctx.globalAlpha = 0.15;
-        ctx.fillStyle = "#000";
+        ctx.globalAlpha = settings.overlayAlpha;
+        ctx.fillStyle = `rgb(${avgR}, ${avgG}, ${avgB})`;
         ctx.fillRect(blurX, blurY, blurW, blurH);
         ctx.restore();
 
@@ -165,11 +256,9 @@ export default function CaptionEraser() {
       };
 
       requestAnimationFrame(renderFrame);
-
       const processedBlob = await recordingDone;
       video.pause();
 
-      // Upload to storage
       const fileName = `caption-erased/${user.id}/${Date.now()}.webm`;
       const { error: uploadError } = await supabase.storage
         .from("media")
@@ -179,7 +268,6 @@ export default function CaptionEraser() {
 
       const { data: urlData } = supabase.storage.from("media").getPublicUrl(fileName);
 
-      // Deduct credits & save generation record via edge function
       const { error: fnError } = await supabase.functions.invoke("caption-erase", {
         body: {
           resultUrl: urlData.publicUrl,
@@ -201,7 +289,7 @@ export default function CaptionEraser() {
       setProcessing(false);
       setProgress(0);
     }
-  }, [videoFile, selection, user, profile, refreshProfile]);
+  }, [videoFile, selection, user, profile, refreshProfile, intensity]);
 
   const reset = () => {
     setVideoFile(null);
@@ -209,8 +297,11 @@ export default function CaptionEraser() {
     setSelection(null);
     setProcessedUrl(null);
     setStep("upload");
+    setIntensity(50);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  const intensityLabel = intensity <= 33 ? "Ușor" : intensity <= 66 ? "Mediu" : "Puternic";
 
   return (
     <DashboardLayout>
@@ -220,7 +311,7 @@ export default function CaptionEraser() {
             <span className="gradient-text">Caption Eraser</span>
           </h1>
           <p className="text-muted-foreground mt-1">
-            Încarcă un video, selectează zona cu text și elimină subtitrările automat.
+            Încarcă un video, selectează zona cu text și elimină subtitrările natural.
           </p>
           <p className="text-xs text-muted-foreground mt-1">Cost: 5 credite per video</p>
         </div>
@@ -249,7 +340,7 @@ export default function CaptionEraser() {
           <div className="space-y-4">
             <div className="bg-card rounded-2xl border border-border p-4">
               <p className="text-sm font-medium mb-3">
-                🎯 Desenează un dreptunghi peste zona cu subtitrări pe care vrei să o elimini:
+                🎯 Desenează un dreptunghi peste zona cu subtitrări:
               </p>
               <div className="relative inline-block w-full">
                 <video
@@ -274,7 +365,7 @@ export default function CaptionEraser() {
                 >
                   {selection && (
                     <div
-                      className="absolute border-2 border-primary bg-primary/20 rounded"
+                      className="absolute border-2 border-primary/60 bg-primary/10 rounded"
                       style={{
                         left: `${selection.x * 100}%`,
                         top: `${selection.y * 100}%`,
@@ -291,11 +382,40 @@ export default function CaptionEraser() {
               </div>
             </div>
 
+            {/* Intensity Slider */}
+            {selection && (
+              <div className="bg-card rounded-2xl border border-border p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Intensitate ștergere</label>
+                  <span className="text-sm font-semibold gradient-text">{intensityLabel}</span>
+                </div>
+                <Slider
+                  value={[intensity]}
+                  onValueChange={(v) => setIntensity(v[0])}
+                  min={0}
+                  max={100}
+                  step={1}
+                  className="w-full"
+                />
+                <div className="flex justify-between text-xs text-muted-foreground">
+                  <span>Ușor (natural)</span>
+                  <span>Mediu</span>
+                  <span>Puternic</span>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-3">
               <Button variant="outline" onClick={reset}>
                 <RotateCcw className="w-4 h-4 mr-2" />
                 Resetare
               </Button>
+              {selection && (
+                <Button variant="outline" onClick={handlePreview}>
+                  <Eye className="w-4 h-4 mr-2" />
+                  Previzualizare
+                </Button>
+              )}
               <Button
                 onClick={processVideo}
                 disabled={!selection || processing}
@@ -314,6 +434,9 @@ export default function CaptionEraser() {
                 )}
               </Button>
             </div>
+
+            {/* Preview canvas */}
+            <canvas ref={previewCanvasRef} className="w-full rounded-xl border border-border" style={{ display: previewCanvasRef.current?.width ? "block" : "none" }} />
           </div>
         )}
 
