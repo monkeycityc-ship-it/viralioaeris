@@ -50,15 +50,32 @@ serve(async (req) => {
       userId = user?.id ?? null;
     }
 
+    // Plan limits for server-side enforcement
+    const PLAN_LIMITS: Record<string, string[]> = {
+      free: ["text", "image"],
+      starter: ["text", "image", "video", "voice", "video-downloader"],
+      creator_pro: ["text", "image", "video", "voice", "caption-eraser", "video-translator", "video-downloader"],
+      agency: ["text", "image", "video", "voice", "caption-eraser", "video-translator", "video-downloader"],
+    };
+
     if (userId) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("credits, is_banned")
+        .select("credits, is_banned, plan")
         .eq("user_id", userId)
         .single();
 
       if (profile?.is_banned) {
         return new Response(JSON.stringify({ error: "Account suspended" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check plan access
+      const allowedTools = PLAN_LIMITS[profile?.plan ?? "free"] ?? PLAN_LIMITS.free;
+      if (!allowedTools.includes(type)) {
+        return new Response(JSON.stringify({ error: `Your plan does not include ${type} generation. Please upgrade.` }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
