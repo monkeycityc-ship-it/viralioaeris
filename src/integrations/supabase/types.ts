@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          created_at: string
+          credits_used: number | null
+          details: Json | null
+          id: string
+          tool: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          credits_used?: number | null
+          details?: Json | null
+          id?: string
+          tool?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          credits_used?: number | null
+          details?: Json | null
+          id?: string
+          tool?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       favorites: {
         Row: {
           created_at: string
@@ -91,6 +121,8 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          characters_limit: number
+          characters_used: number
           created_at: string
           credits: number
           display_name: string | null
@@ -106,6 +138,8 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          characters_limit?: number
+          characters_used?: number
           created_at?: string
           credits?: number
           display_name?: string | null
@@ -121,6 +155,8 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          characters_limit?: number
+          characters_used?: number
           created_at?: string
           credits?: number
           display_name?: string | null

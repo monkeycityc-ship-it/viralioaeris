@@ -125,6 +125,9 @@ export default function History() {
                     {gen.result_url && gen.type === "image" && (
                       <img src={gen.result_url} alt="" className="mt-2 rounded-lg max-h-32 object-cover" />
                     )}
+                    {gen.result_url && gen.type === "video" && (
+                      <video src={gen.result_url} controls className="mt-2 rounded-lg max-h-48 w-full max-w-lg" />
+                    )}
                     {gen.result_url && gen.type === "audio" && (
                       <audio src={gen.result_url} controls className="mt-2 w-full max-w-md" />
                     )}

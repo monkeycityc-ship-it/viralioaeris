@@ -39,6 +39,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAdmin(roles?.some((r) => r.role === "admin") ?? false);
   };
 
+  const checkSubscription = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("check-subscription");
+      if (!error && data) {
+        // Refresh profile after subscription check syncs plan
+        const currentUser = (await supabase.auth.getUser()).data.user;
+        if (currentUser) await fetchProfile(currentUser.id);
+      }
+    } catch {
+      // Silent fail — subscription check is optional
+    }
+  };
+
   const refreshProfile = async () => {
     if (user) await fetchProfile(user.id);
   };
@@ -50,6 +63,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         if (session?.user) {
           setTimeout(() => fetchProfile(session.user.id), 0);
+          // Check subscription status on auth change
+          setTimeout(() => checkSubscription(), 500);
         } else {
           setProfile(null);
           setIsAdmin(false);
@@ -61,12 +76,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+        setTimeout(() => checkSubscription(), 1000);
+      }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Periodic subscription check every 60s
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(checkSubscription, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const signOut = async () => {
     await supabase.auth.signOut();
