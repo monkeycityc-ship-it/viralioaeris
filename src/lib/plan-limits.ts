@@ -46,7 +46,7 @@ export function getPlanLimits(plan: string) {
 
 export function canUseTool(plan: string, tool: string): boolean {
   const limits = getPlanLimits(plan);
-  return limits.tools.includes(tool);
+  return (limits.tools as readonly string[]).includes(tool);
 }
 
 // Map tool routes to tool keys
