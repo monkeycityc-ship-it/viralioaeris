@@ -23,6 +23,14 @@ const VOICE_MAP: Record<string, string> = {
   "lily": "pFZP5JQG7iQjIQuC4Bku",
 };
 
+// Plan limits for server-side enforcement
+const PLAN_LIMITS: Record<string, { voiceCharacters: number; tools: string[] }> = {
+  free: { voiceCharacters: 3000, tools: ["text", "image"] },
+  starter: { voiceCharacters: 50000, tools: ["text", "image", "video", "voice", "video-downloader"] },
+  creator_pro: { voiceCharacters: 150000, tools: ["text", "image", "video", "voice", "caption-eraser", "video-translator", "video-downloader"] },
+  agency: { voiceCharacters: 500000, tools: ["text", "image", "video", "voice", "caption-eraser", "video-translator", "video-downloader"] },
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -53,7 +61,6 @@ serve(async (req) => {
       });
     }
 
-    // Auth check
     const authHeader = req.headers.get("Authorization");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -73,16 +80,24 @@ serve(async (req) => {
       });
     }
 
-    // Check credits (audio costs 2 credits)
     const creditCost = 2;
     const { data: profile } = await supabase
       .from("profiles")
-      .select("credits, is_banned, voice_characters_remaining")
+      .select("credits, is_banned, voice_characters_remaining, plan, characters_used, characters_limit")
       .eq("user_id", userId)
       .single();
 
     if (profile?.is_banned) {
       return new Response(JSON.stringify({ error: "Account suspended" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check plan access
+    const planLimits = PLAN_LIMITS[profile?.plan ?? "free"] ?? PLAN_LIMITS.free;
+    if (!planLimits.tools.includes("voice")) {
+      return new Response(JSON.stringify({ error: "Your plan does not include Voice AI. Please upgrade." }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -96,16 +111,14 @@ serve(async (req) => {
     }
 
     if ((profile?.voice_characters_remaining ?? 0) < text.length) {
-      return new Response(JSON.stringify({ error: "Voice character limit reached" }), {
+      return new Response(JSON.stringify({ error: "Voice character limit reached. Upgrade your plan for more characters." }), {
         status: 402,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Resolve voice ID
     const voiceId = VOICE_MAP[voice ?? "sarah"] ?? VOICE_MAP["sarah"];
 
-    // Call ElevenLabs TTS
     const ttsResponse = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
       {
@@ -140,7 +153,6 @@ serve(async (req) => {
     const audioBuffer = await ttsResponse.arrayBuffer();
     const audioBytes = new Uint8Array(audioBuffer);
 
-    // Upload to storage
     const fileName = `${userId}/audio/${Date.now()}.mp3`;
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("media")
@@ -168,11 +180,22 @@ serve(async (req) => {
       metadata: { voice: voice ?? "sarah", stability, speed, char_count: text.length },
     });
 
-    // Deduct credits and voice characters
+    // Deduct credits and voice characters, track usage
+    const newCharsUsed = (profile?.characters_used ?? 0) + text.length;
     await supabase.from("profiles").update({
       credits: (profile?.credits ?? 0) - creditCost,
       voice_characters_remaining: (profile?.voice_characters_remaining ?? 0) - text.length,
+      characters_used: newCharsUsed,
     }).eq("user_id", userId);
+
+    // Log activity
+    await supabase.from("activity_logs").insert({
+      user_id: userId,
+      action: `Voice generation: ${text.length} chars, voice: ${voice ?? "sarah"}`,
+      tool: "voice",
+      credits_used: creditCost,
+      details: { voice: voice ?? "sarah", chars: text.length },
+    });
 
     return new Response(JSON.stringify({ result_url: publicUrl, voice, chars_used: text.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
