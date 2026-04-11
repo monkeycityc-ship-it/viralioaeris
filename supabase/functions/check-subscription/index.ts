@@ -7,6 +7,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const PRODUCT_PLANS: Record<string, { plan: string; credits: number; voiceCharacters: number }> = {
+  "prod_UI98WvS5cnP7V3": { plan: "starter", credits: 150, voiceCharacters: 50000 },
+  "prod_UI98plezaPFEFI": { plan: "creator_pro", credits: 400, voiceCharacters: 150000 },
+  "prod_UI987GnQ3bKI3P": { plan: "agency", credits: 1500, voiceCharacters: 500000 },
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -34,6 +40,13 @@ serve(async (req) => {
 
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     if (customers.data.length === 0) {
+      // No customer — reset to free
+      await supabaseClient.from("profiles").update({
+        plan: "free",
+        stripe_customer_id: null,
+        stripe_subscription_id: null,
+      }).eq("user_id", user.id);
+
       return new Response(JSON.stringify({ subscribed: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -47,29 +60,46 @@ serve(async (req) => {
     });
 
     if (subscriptions.data.length === 0) {
+      // No active sub — reset to free
+      await supabaseClient.from("profiles").update({
+        plan: "free",
+        stripe_customer_id: customerId,
+        stripe_subscription_id: null,
+      }).eq("user_id", user.id);
+
       return new Response(JSON.stringify({ subscribed: false }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const sub = subscriptions.data[0];
-    const productId = sub.items.data[0].price.product;
+    const productId = sub.items.data[0].price.product as string;
     const subscriptionEnd = new Date(sub.current_period_end * 1000).toISOString();
 
-    // Update profile plan based on product
-    const PRODUCT_PLANS: Record<string, { plan: string; credits: number }> = {
-      "prod_UI98WvS5cnP7V3": { plan: "starter", credits: 150 },
-      "prod_UI98plezaPFEFI": { plan: "creator_pro", credits: 400 },
-      "prod_UI987GnQ3bKI3P": { plan: "agency", credits: 1500 },
-    };
-
-    const planInfo = PRODUCT_PLANS[productId as string];
+    const planInfo = PRODUCT_PLANS[productId];
     if (planInfo) {
-      await supabaseClient.from("profiles").update({
+      // Get current profile to check if plan changed
+      const { data: currentProfile } = await supabaseClient
+        .from("profiles")
+        .select("plan, credits")
+        .eq("user_id", user.id)
+        .single();
+
+      const updateData: Record<string, any> = {
         plan: planInfo.plan,
         stripe_customer_id: customerId,
         stripe_subscription_id: sub.id,
-      }).eq("user_id", user.id);
+      };
+
+      // If plan changed (upgrade/downgrade), reset credits and voice chars
+      if (currentProfile?.plan !== planInfo.plan) {
+        updateData.credits = planInfo.credits;
+        updateData.voice_characters_remaining = planInfo.voiceCharacters;
+        updateData.characters_limit = planInfo.voiceCharacters;
+        updateData.characters_used = 0;
+      }
+
+      await supabaseClient.from("profiles").update(updateData).eq("user_id", user.id);
     }
 
     return new Response(JSON.stringify({
