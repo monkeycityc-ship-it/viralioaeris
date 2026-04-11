@@ -221,6 +221,14 @@ serve(async (req) => {
         if (profile) {
           await supabase.from("profiles").update({ credits: profile.credits - 2 }).eq("user_id", userId);
         }
+
+        // Log activity
+        await supabase.from("activity_logs").insert({
+          user_id: userId,
+          action: `Image generated: ${prompt.substring(0, 100)}`,
+          tool: "image",
+          credits_used: 2,
+        });
       }
 
       return new Response(JSON.stringify({ result_url: storedUrl, result_text: resultText }), {
